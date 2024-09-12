@@ -4,21 +4,25 @@
 // react imports
 import React, { useState } from "react";
 
-// shadcn import
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+// component imports
+import ApiInput from "./components/apiInput";
 
 // data fetching
-import { get } from "@/lib/actions"
+import { get } from "@/lib/data";
+
+// utils
+import { isDisabledIndex } from "@/lib/utils"
 
 // Interfaces
 interface Error {
+  url: string;
   message: string;
   data: any;
 }
 
 interface Data {
   url: string;
+  message: string;
   data: any;
 }
 
@@ -30,24 +34,47 @@ interface Response {
 
 export default function Home() {
 
-  const initData: Data = {
-    url: "",
-    data: {}
-  }
+  const initSuccess: Data = {
+    url: "https://statfin.stat.fi/PxWeb/api/v1/fi/StatFin",
+    message: "",
+    data: {
+      lol: "lol"
+    }
+  };
 
-  const initResponse: Response = {
-    success: initData,
+  const initSuccess2: Data = {
+    url: "https://statfin.stat.fi/PxWeb/api/v1/fi/StatFin/adopt",
+    message: "",
+    data: {
+      lol: "lol"
+    }
+  };
+
+  const initResponse = {
+    success: initSuccess,
     error: null
   }
 
-  const [responses, setResponses] = useState<Response[]>([initResponse]);
+  const initResponse2 = {
+    success: initSuccess2,
+    error: null
+  }
 
-  const addResponse = async (url: string) => {
+  const initResponses: Response[] = [initResponse, initResponse2, initResponse, initResponse2];
+
+  const [responses, setResponses] = useState<Response[]>(initResponses);
+
+  const getResponse = async (url: string, index: number) => {
 
     try {
+      if (!url) {
+        throw new Error("No valid url");
+      }
+
       const data = await get(url);
       const dataForm: Data = {
         url: url,
+        message: "Response OK",
         data: data
       }
 
@@ -56,12 +83,15 @@ export default function Home() {
         error: null
       }
 
-      setResponses([...responses, dataResponse]);
+      const newData = responses.splice(0, index);
+      newData.push(dataResponse);
+      setResponses([...newData]);
     }
 
     catch (error) {
 
       const errorForm: Error = {
+        url: url,
         message: "No valid responses",
         data: error
       }
@@ -71,44 +101,54 @@ export default function Home() {
         error: errorForm
       }
 
-      setResponses([...responses, errorResponse]);
+      const newData = responses.splice(0, index);
+      newData.push(errorResponse);
+      setResponses([...newData]);
     }
   }
 
   return (
-    <div className="min-h-screen flex justify-center">
-      <main className="p-8 max-w-7xl w-full">
+    <div className="min-h-screen flex justify-center bg-violet-100">
+      <main className=" flex flex-col gap-12 p-8 max-w-7xl w-full">
 
-        {responses.map((response, index) => (
+        {responses.length === 0 && (
+          <ApiInput
+            onGet={(newUrl) => getResponse(newUrl, 0)}
+          />
+        )}
 
-          <div className="w-full">
+        {responses.length !== 0 && responses.map((response, index) => (
 
-
+          <div key={index} className="bg-violet-200 p-8 rounded-2xl border border-zinc-300">
             {
-              true ?
+              response.success ?
+
                 // Valid response
-                <div key={index} className="w-full">
+                <div>
                   {/* API input */}
-                  <div className="flex gap-2">
-                    <Input name="api-url" placeholder="API url" value={response.success?.url} />
-                    <Button id="api-form" className="bg-black text-white">GET</Button>
-                  </div>
+                  <ApiInput
+                    onGet={(newUrl) => getResponse(newUrl, index)}
+                    initUrl={response.success?.url}
+                    disabled={isDisabledIndex(index, responses.length - 1)}
+                  />
 
                   <div>
                     <h2 className="text-xl font-bold mt-8">Response</h2>
-                    <pre className="bg-gray-100 p-4 mt-2">
+                    <pre className="p-4 mt-2">
                       {JSON.stringify(response.success?.data, null, 2)}
                     </pre>
                   </div>
                 </div>
                 :
+
                 // Error response
-                <div key={index} className="w-full">
+                <div>
                   {/* API input */}
-                  <div className="flex gap-2">
-                    <Input name="api-url" placeholder="API url" value={response.success?.url} />
-                    <Button id="api-form" className="bg-black text-white">GET</Button>
-                  </div>
+                  <ApiInput
+                    onGet={(newUrl) => getResponse(newUrl, index)}
+                    initUrl={response.error?.url}
+                    disabled={isDisabledIndex(index, responses.length - 1)}
+                  />
 
                   <div key={index}>
                     <h2 className="text-xl font-bold mt-8">Error</h2>
